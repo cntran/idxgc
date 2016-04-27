@@ -3,12 +3,12 @@
  * Plugin Name: IDX GameChanger
  * Plugin URI: http://www.sdbxstudio.com
  * Description: IDXGC Wordpress Integration
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Craig Tran
  * Author URI: http://www.sdbxstudio.com
  * Text Domain: sdbxtextdomain
  * License: GPL2
-* GitHub Plugin URI: https://github.com/cntran/idxgc
+ * GitHub Plugin URI: https://github.com/cntran/idxgc
  * GitHub Branch: master
  */
  

@@ -85,6 +85,17 @@ function getSlug(string) {
   return string.split(' ').join('-').split('/').join('-').toLowerCase();
 }
 
+function printListingPage(printUrl) {
+
+  var wnd = window.open(printUrl);
+  setTimeout(function() {
+    wnd.close();
+  }, 2000);
+    
+  return false;
+}
+
+
 var idxgc = {	
 	
 	// Tracking Class

@@ -36,7 +36,7 @@ class IdxUI {
             <div>email a friend</div>
             </a>  
           </div>
-          <div class="grid-u-5-24 action" onclick="window.print();">
+          <div class="grid-u-5-24 action" onclick="printListingPage('<?php echo IDXConfig::baseUrl(); ?>/idxgc-listing-printable/?mls_number=<?php echo $listing->mls_number; ?>');">
             <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-print-icon.png" />
             <div>printer friendly</div>
           </div>
