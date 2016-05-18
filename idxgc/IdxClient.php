@@ -2,6 +2,7 @@
 
 class IdxClient {
   
+  const RESULTS_PER_PAGE = 12;
   const MAX_SEARCH_RESULTS = 200;
   
   private $_apikey = '';
@@ -12,6 +13,10 @@ class IdxClient {
     $this->_apikey = IdxConfig::apiKey();
     $this->_apiversion = IdxConfig::API_VERSION;
     $this->_url = IdxConfig::HOST_NAME;
+  }
+  
+  public static function resultsPerPage() {
+    return self::RESULTS_PER_PAGE;
   }
 
   public static function maxSearchResults() {
@@ -131,7 +136,6 @@ class IdxClient {
       $region = $_REQUEST["region"];
       $location = $idxUI->getSlug($region);
     }
-
     if ($_REQUEST["list_area_$location"] != "") {
       $listArea = $_REQUEST["list_area_$location"];
     }
@@ -238,6 +242,93 @@ class IdxClient {
     $response = $this->request($args);
    
     return $response;
+  }
+  
+  function getFeaturedListings($args = array("mlsNumbers" => array(), "listAgentEmails" => array(), "listOfficeName" => array()) ) { //$mlsNumbers = array(), $listAgentEmails = array(), $listOfficeName = "") {
+    
+    $errorMessage = "";
+
+    try {  
+      
+      $listings = array();
+      $featuredListings = array();
+      $agentListings = array();
+      $officeListings = array();
+      
+      if (is_array($args["listAgentEmails"]) && count($args["listAgentEmails"]) > 0) {
+        $_REQUEST["mls_numbers"] = null;
+        $_REQUEST["list_office_name"] = null;
+        $_REQUEST["list_agent_emails"] = $args["listAgentEmails"];
+        $searchParams = $this->searchParams($resultsPerPage = 0);
+        $agentResults = $this->getListings($searchParams);
+        $agentListings = $agentResults->listings;
+        $listings = array_merge($agentListings, $listings);
+      }
+      
+      if (is_array($args["mlsNumbers"]) && count($args["mlsNumbers"]) > 0) {
+        $_REQUEST["list_agent_emails"] = null;
+        $_REQUEST["list_office_name"] = null;
+        $_REQUEST["mls_numbers"] = $args["mlsNumbers"];
+        $searchParams = $this->searchParams($resultsPerPage = 0);
+        $featuredResults = $this->getListings($searchParams);
+        $featuredListings = $featuredResults->listings;
+        $listings = array_merge($featuredListings, $listings);
+      }
+      
+      if ($args["listOfficeName"] != "") {
+        $_REQUEST["list_agent_emails"] = null;
+        $_REQUEST["mls_numbers"] = null;
+        $_REQUEST["list_office_name"] = $args["listOfficeName"];
+        $searchParams = $this->searchParams($resultsPerPage = 0);
+        $officeResults = $this->getListings($searchParams);
+        $officeListings = $officeResults->listings;
+        $listings = array_merge($officeListings, $listings);
+      }
+      
+      $listingMlsNumbers = array();
+      $listingsToReturn = array();
+      foreach ($listings as $listing) {
+        if (!in_array($listing->mls_number, $listingMlsNumbers)) {
+          array_push($listingsToReturn, $listing);
+        }
+        $listingMlsNumbers[] = $listing->mls_number;
+      }
+      
+      $results = new stdClass();
+      $results->count = count($listingsToReturn);
+      $results->listings = $listingsToReturn;
+      
+      return $results;
+    }
+    catch (Exception $ex) {
+      $errorMessage = $ex->getMessage();
+    }
+    
+  }
+  
+  function getCommunityListings($args = array("listAreas" => array(), "view" => "")) { 
+         
+    $listAreasTrimmed = array();
+    $listAreas = $args["listAreas"];
+    
+    foreach($listAreas as $listArea) {
+      array_push($listAreasTrimmed, trim($listArea));
+    }
+    $listAreasTrimmed = array_filter($listAreasTrimmed);
+    if ($args["view"] != "")
+      $_REQUEST["view"] = $view;
+      
+    if (count($listAreasTrimmed) > 0)
+      $_REQUEST["list_area"] = $listAreasTrimmed;
+    
+    $_REQUEST["search_type"] = "RESIDENTIAL";
+    $_REQUEST["property_type_residential"] = "Single Family";
+    
+    $searchParams = $this->searchParams($resultsPerPage = self::RESULTS_PER_PAGE);
+    
+    $results = $this->getListings($searchParams);
+    return $results;
+ 
   }
   
   function getLocations() {

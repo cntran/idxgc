@@ -18,31 +18,21 @@ class IdxUI {
       </div>
       <div id="idxgc-listing-actions">
         <div class="grid-g">
-          <div class="grid-u-5-24 action">
+          <div class="grid-u-6-24 action">
             <a href="<?php echo IDXConfig::baseUrl(); ?>/portal?add_favorite=<?php echo $idxClient->getListingId($listing); ?>">
-            <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-favorites-icon.png" />
-            <div>add to favorites</div>
+            <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-favorites-icon.png" />&nbsp;add to favorites
             </a>
           </div>
-          <div class="grid-u-5-24 action">
-            <a href="javascript:void();" data-open="idxgcSeeItNow">
-              <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-seeitnow-icon.png" />
-              <div>see it now</div>
-            </a>
-          </div>
-          <div class="grid-u-5-24 action">
+          <div class="grid-u-6-24 action">
             <a href="mailto:?subject=A Property listing for you&body=<?php echo $listing->address_1; ?> - <?php echo IDXConfig::baseUrl() . "/listing/?mls_number=" . $listing->mls_number; ?>">
-            <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-email-icon.png" />
-            <div>email a friend</div>
+            <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-email-icon.png" />&nbsp;email a friend
             </a>  
           </div>
-          <div class="grid-u-5-24 action" onclick="printListingPage('<?php echo IDXConfig::baseUrl(); ?>/idxgc-listing-printable/?mls_number=<?php echo $listing->mls_number; ?>');">
-            <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-print-icon.png" />
-            <div>printer friendly</div>
+          <div class="grid-u-6-24 action" onclick="printListingPage('<?php echo IDXConfig::baseUrl(); ?>/idxgc-listing-printable/?mls_number=<?php echo $listing->mls_number; ?>');">
+            <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-print-icon.png" />&nbsp;printer friendly
           </div>
-          <div class="grid-u-4-24 action">
-            <a class="addthis_button_compact"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-share-icon.png" border="0" alt="Share" />
-            <div>share</div>
+          <div class="grid-u-6-24 action">
+            <a class="addthis_button_compact"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-share-icon.png" border="0" alt="Share" />&nbsp;share
             </a>
           </div>
         </div>
@@ -286,15 +276,24 @@ class IdxUI {
     return $output_string;
   }  
   
-  public function clientRequestForm($type, $listingId = "", $resize = true, $height = 300) {
+  public function clientRequestForm($type, $listingId = "", $height = 550, $popup = false) {
     ob_start();
-        ?>
-    <iframe id="idxgc-frame" scrolling="no" style="width:100%;height: <?php echo $height; ?>px;" frameborder="0" src="<?php echo IdxConfig::HOST_NAME; ?>clients/client_requests/new?id=<?php echo IdxConfig::apiKey(); ?>&type=<?php echo $type; ?>&listing_id=<?php echo $listingId; ?>"></iframe>
     
-    <?php if ($resize == true) : ?>
+    if ($popup == true)
+      $iframeStyle = "z-index:1;position:absolute;top: 35px;left:1%;right: 1%;width:98%;height:130%;";
+    else
+      $iframeStyle = "width: 100%; height: 100%;";
+    ?>
+    
+    <iframe id="idxgc-frame" class="idxgc-frame" scrolling="no" style="<?php echo $iframeStyle; ?>" frameborder="0" src="<?php echo IdxConfig::HOST_NAME; ?>clients/client_requests/new?id=<?php echo IdxConfig::apiKey(); ?>&type=<?php echo $type; ?>&listing_id=<?php echo $listingId; ?>"></iframe>
+    <?php if ($popup == true) : ?>
+      <div style="position: relative;height:<?php echo $height; ?>px"></div>
+    <?php endif; ?>
+    
+    <?php if ($popup == false) : ?>
     <script type="text/javascript">
       idxgc.events.resizeIframeOnLoad();
-    </script>   
+    </script>    
     <?php endif; ?>
     
     <?php
@@ -731,14 +730,14 @@ class IdxUI {
     ob_start();
     ?>
     <div id="idxgc-features-widget" class="grid-g">
-      <div class="grid-u-1-3">
-        <a href="<?php echo $clientPortalPath; ?>?listing_watch=1"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listingwatch.png" /></a>
+      <div class="idxgc-feature grid-u-1">
+        <a href="<?php echo $clientPortalPath; ?>?market_stats=1"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-marketstats.png" />&nbsp;Market Stats</a>
       </div>
-      <div class="grid-u-1-3">
-        <a href="<?php echo $clientPortalPath; ?>?market_stats=1"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-marketstats.png" /></a>
+      <div class="idxgc-feature grid-u-1">
+        <a href="<?php echo $clientPortalPath; ?>?listing_watch=1"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listingwatch.png" />&nbsp;Listing Watch</a>
       </div>
-      <div class="grid-u-1-3">
-        <a href="<?php echo $clientPortalPath; ?>?home_valuation=1"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-homevaluation.png" /></a>
+      <div class="idxgc-feature grid-u-1">
+        <a href="<?php echo $clientPortalPath; ?>?home_valuation=1"><img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-homevaluation.png" />&nbsp;My Home Valuation</a>
       </div>
     </div>
     <?php

@@ -112,12 +112,12 @@ var idxgc = {
 	"events" : {
   	"resizeIframeOnLoad" : function() {
     	window.addEventListener('message', function(e) {
-        var iframe = document.getElementById("idxgc-frame");
         var eventName = e.data[0];
-        var data = e.data[1];
+        var pageHeight = e.data[1];
         switch(eventName) {
           case 'pageContentHeight':
-            iframe.style.height = data + 50 + "px";
+            var iframe = document.getElementById("idxgc-frame");
+            iframe.style.height = pageHeight + "px";
             break;
         }
       }, false);

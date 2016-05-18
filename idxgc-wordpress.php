@@ -201,6 +201,8 @@ function idxgcListing() {
       Tahoe Sierra Multiple Listing Service. 
       <?php elseif ($listing->source == "nnrmls") : ?>
       Northern Nevada Regional Listing Service.
+      <?php elseif ($listing->source == "ivmls") : ?>
+      Incline Village Multiple Listing Service.
       <?php endif; ?>
       All rights reserved.</p>
       <img src="<?php echo IDXConfig::imageDir(); ?>/broker-reciprocity.jpg" width="100"/><br />
@@ -210,15 +212,16 @@ function idxgcListing() {
   </div>
   
   
-   <div class="small reveal" id="idxgcListingInquiry" data-reveal>
-     <?php echo $idxUI->clientRequestForm($type = "listing-inquiry", $listingId, $resize = false, $height = 390); ?>
+   <div class="reveal" id="idxgcListingInquiry" data-reveal>
+     
+     <?php echo $idxUI->clientRequestForm($type = "listing-inquiry", $listingId, $height = 550, $popup = true); ?>
      <div class="close-button" data-close aria-label="Close modal" type="button">
         <span aria-hidden="true">&times;</span>
      </div>
    </div>
    
-   <div class="small reveal" id="idxgcSeeItNow" data-reveal>
-     <?php echo $idxUI->clientRequestForm($type = "see-it-now", $listingId, $resize = false, $height = 390); ?>
+   <div class="reveal" id="idxgcSeeItNow" data-reveal>
+     <?php echo $idxUI->clientRequestForm($type = "see-it-now", $listingId, $height = 550, $popup = true); ?>
      <div class="close-button" data-close aria-label="Close modal" type="button">
         <span aria-hidden="true">&times;</span>
      </div>
@@ -240,27 +243,36 @@ function idxgcSearchForm($action = "", $searchFormType = "") {
 }
 
 
-function idxgcSearchResults() {
+function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPagination = true) {
   global $idxClient, $idxUI;
     
-  $errorMessage = "";
-  $resultView = "grid";
-  if ($_REQUEST["result_view"]) {
-    $resultView = $_REQUEST["result_view"];
-  }
-  try {  
-    if ($resultView == "map") {
-      $searchParams = $idxClient->searchParams($resultsPerPage = 0);
-      $response = $idxClient->getListings($searchParams);
+  if (count($listings) == 0 && $totalResultsCount == 0) {
+    $errorMessage = "";
+    $resultView = "grid";
+    if ($_REQUEST["result_view"]) {
+      $resultView = $_REQUEST["result_view"];
     }
-    else {
-      $searchParams = $idxClient->searchParams($resultsPerPage = 12);
-      $response = $idxClient->getListings($searchParams);
+    try {  
+      if ($resultView == "map") {
+        $searchParams = $idxClient->searchParams($resultsPerPage = 0);
+        $results = $idxClient->getListings($searchParams);
+      }
+      else {
+        $searchParams = $idxClient->searchParams($resultsPerPage = 12);
+        $results = $idxClient->getListings($searchParams);
+      }
+      $listings = array();
+      $totalResultsCount = 0;
+      if (count($results->listings) > 0) {
+        $listings = $results->listings;
+        $totalResultsCount = $results->count;
+      }
+    }
+    catch (Exception $ex) {
+      $errorMessage = $ex->getMessage();
     }
   }
-  catch (Exception $ex) {
-    $errorMessage = $ex->getMessage();
-  }
+  
   ?>
 
 <div id="idxgc-search-results" class="grid-g">
@@ -273,24 +285,20 @@ function idxgcSearchResults() {
           $requestParams = preg_replace("/pg=(\d{1}|\d{2}|\d{3})&/","", $requestParams);
           $requestParams = preg_replace("/pg=(\d{1}|\d{2}|\d{3})/","", $requestParams);
         ?>
-         <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?') . "/?" . $requestParams; ?>&result_view=grid"><span <?php if ($resultView == "grid"): ?>class="active"<?php endif; ?>>Grid View</span></a>
-         <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?') . "/?" . $requestParams; ?>&result_view=map"><span <?php if ($resultView == "map"): ?>class="active"<?php endif; ?>>Map View</span></a>
+         <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?') . "/?" . $requestParams; ?>&result_view=grid"><span <?php if ($_REQUEST["result_view"] != "map"): ?>class="active"<?php endif; ?>>Grid View</span></a>
+         <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?') . "/?" . $requestParams; ?>&result_view=map"><span <?php if ($_REQUEST["result_view"] == "map"): ?>class="active"<?php endif; ?>>Map View</span></a>
         </div>
       </div>
       <div class="grid-u-1 grid-u-sm-1-2">
-        <?php if ($resultView == "grid") : ?>
-          <?php echo $idxUI->searchPagination($resultsPerPage = 12, $response->count); ?>
+        <?php if ($_REQUEST["result_view"] != "map" && $showPagination == true) : ?>
+          <?php echo $idxUI->searchPagination($resultsPerPage = 12, $totalResultsCount); ?>
         <?php else: ?>
-          <?php echo $idxUI->searchResultsCount($resultsCount = count($response->listings), $totalCount = $response->count); ?>
+          <?php echo $idxUI->searchResultsCount($resultsCount = count($listings), $totalCount = $totalResultsCount); ?>
         <?php endif; ?>
       </div>
     </div>
-    <?php 
-      $listings = array();
-      if (count($response->listings) > 0)
-        $listings = $response->listings;
-    ?>
-    <?php if ($resultView == "map") : ?>
+    
+    <?php if ($_REQUEST["result_view"] == "map") : ?>
     <div id="idxgc-map-results">
       <?php $pinsImagePath = trailingslashit( IDXGC_PLUGIN_URI ) . "idxgc/images"; ?>
       <?php 
@@ -304,13 +312,15 @@ function idxgcSearchResults() {
         }
       ?>
       
-      <?php echo $idxUI->mapResults($response->listings, $pinsImagePath, $mapBounds); ?>
+      <?php echo $idxUI->mapResults($listings, $pinsImagePath, $mapBounds); ?>
     </div>
     <?php else: ?>
     <div id="idxgc-list-results">
-      <?php echo $idxUI->searchResults($response->listings); ?>
-      
-      <div id="idxgc-pagination-footer"><?php echo $idxUI->searchPagination($resultsPerPage = 12, $response->count); ?></div>
+      <?php echo $idxUI->searchResults($listings); ?>
+       
+      <?php if ($showPagination == true) : ?>
+      <div id="idxgc-pagination-footer"><?php echo $idxUI->searchPagination($resultsPerPage = 12, $totalResultsCount); ?></div>
+      <?php endif; ?>
     </div>
     <?php endif; ?>
   </div>
