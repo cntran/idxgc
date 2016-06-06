@@ -746,6 +746,52 @@ class IdxUI {
     return $output_string;
   }
   
+  function getHomeFeaturesWidget($clientPortalPath = "") {
+    ob_start();
+    ?>
+    <div id="idxgc-features-widget" class="idxgc-features-widget-row grid-g">
+      <a id="idxgc-feauture-marketstats" class="idxgc-feature grid-u-1 grid-u-sm-1-3" href="<?php echo $clientPortalPath; ?>?market_stats=1">Market Stats</a>
+      <a id="idxgc-feauture-homevaluation" class="idxgc-feature grid-u-1 grid-u-sm-1-3" href="<?php echo $clientPortalPath; ?>?home_valuation=1">My Home Valuation</a>
+      <a id="idxgc-feauture-listingwatch" class="idxgc-feature grid-u-1 grid-u-sm-1-3" href="<?php echo $clientPortalPath; ?>?listing_watch=1">Listing Watch</a>
+    </div>
+    
+    <style>
+      .idxgc-features-widget-row .idxgc-feature {
+        padding: 15px;
+        padding-left: 75px;
+        text-align: left;
+        color: #58595B;
+      }
+      .idxgc-features-widget-row .idxgc-feature:hover {
+        color: #FFF;
+      }
+      #idxgc-feauture-marketstats {
+        background: #FFF url(<?php echo IDXConfig::imageDir(); ?>/idxgc-marketstats.png) 15px center no-repeat;
+      }
+      #idxgc-feauture-marketstats:hover {
+        background: #58595B url(<?php echo IDXConfig::imageDir(); ?>/idxgc-marketstats-over.png) 15px center no-repeat;
+      }
+      #idxgc-feauture-homevaluation {
+        background: #FFF url(<?php echo IDXConfig::imageDir(); ?>/idxgc-homevaluation.png) 15px center no-repeat;
+      }
+      #idxgc-feauture-homevaluation:hover {
+        background: #58595B url(<?php echo IDXConfig::imageDir(); ?>/idxgc-homevaluation-over.png) 15px center no-repeat;
+      }
+      #idxgc-feauture-listingwatch {
+        background: #FFF url(<?php echo IDXConfig::imageDir(); ?>/idxgc-listingwatch.png) 15px center no-repeat;
+      }
+      #idxgc-feauture-listingwatch:hover {
+        background: #58595B url(<?php echo IDXConfig::imageDir(); ?>/idxgc-listingwatch-over.png) 15px center no-repeat;
+      }
+
+    </style>
+    <?php
+    $output_string = ob_get_contents();
+    ob_end_clean();
+    return $output_string;
+  }
+
+  
   function getPriceArray() {
     $priceArray = array(10000,20000,30000,40000,50000,60000,70000,80000,90000,100000,200000,300000,400000,500000,600000,700000,800000,900000,1000000,2000000,3000000,4000000,5000000,6000000,7000000,8000000,9000000,10000000);
     return $priceArray;

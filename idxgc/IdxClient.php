@@ -255,14 +255,14 @@ class IdxClient {
       $agentListings = array();
       $officeListings = array();
       
-      if (is_array($args["listAgentEmails"]) && count($args["listAgentEmails"]) > 0) {
+      if ($args["listOfficeName"] != "") {
+        $_REQUEST["list_agent_emails"] = null;
         $_REQUEST["mls_numbers"] = null;
-        $_REQUEST["list_office_name"] = null;
-        $_REQUEST["list_agent_emails"] = $args["listAgentEmails"];
+        $_REQUEST["list_office_name"] = $args["listOfficeName"];
         $searchParams = $this->searchParams($resultsPerPage = 0);
-        $agentResults = $this->getListings($searchParams);
-        $agentListings = $agentResults->listings;
-        $listings = array_merge($agentListings, $listings);
+        $officeResults = $this->getListings($searchParams);
+        $officeListings = $officeResults->listings;
+        $listings = array_merge($officeListings, $listings);
       }
       
       if (is_array($args["mlsNumbers"]) && count($args["mlsNumbers"]) > 0) {
@@ -275,15 +275,16 @@ class IdxClient {
         $listings = array_merge($featuredListings, $listings);
       }
       
-      if ($args["listOfficeName"] != "") {
-        $_REQUEST["list_agent_emails"] = null;
+      if (is_array($args["listAgentEmails"]) && count($args["listAgentEmails"]) > 0) {
         $_REQUEST["mls_numbers"] = null;
-        $_REQUEST["list_office_name"] = $args["listOfficeName"];
+        $_REQUEST["list_office_name"] = null;
+        $_REQUEST["list_agent_emails"] = $args["listAgentEmails"];
         $searchParams = $this->searchParams($resultsPerPage = 0);
-        $officeResults = $this->getListings($searchParams);
-        $officeListings = $officeResults->listings;
-        $listings = array_merge($officeListings, $listings);
+        $agentResults = $this->getListings($searchParams);
+        $agentListings = $agentResults->listings;
+        $listings = array_merge($agentListings, $listings);
       }
+      
       
       $listingMlsNumbers = array();
       $listingsToReturn = array();
@@ -316,13 +317,13 @@ class IdxClient {
     }
     $listAreasTrimmed = array_filter($listAreasTrimmed);
     if ($args["view"] != "")
-      $_REQUEST["view"] = $view;
+      $_REQUEST["view"] = $args["view"];
       
     if (count($listAreasTrimmed) > 0)
       $_REQUEST["list_area"] = $listAreasTrimmed;
     
     $_REQUEST["search_type"] = "RESIDENTIAL";
-    $_REQUEST["property_type_residential"] = "Single Family";
+    //$_REQUEST["property_type_residential"] = "Single Family";
     
     $searchParams = $this->searchParams($resultsPerPage = self::RESULTS_PER_PAGE);
     

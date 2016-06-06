@@ -8,6 +8,8 @@ if ( function_exists( 'idxgcSearchResults' ) )
   add_shortcode( 'idxgcSearchResults', 'idxgcSearchResults' );
 if ( function_exists( 'idxgcContactForm' ) )
   add_shortcode( 'idxgcContactForm', 'idxgcContactForm' );
+if ( function_exists( 'idxgcCommunity' ) )
+  add_shortcode( 'idxgcCommunity', 'idxgcCommunity' );
 
 add_action( 'wp_enqueue_scripts', 'idxgcScripts' );
 
@@ -277,7 +279,7 @@ function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPa
 
 <div id="idxgc-search-results" class="grid-g">
   <div class="grid-u-1">
-    <div class="grid-g">
+    <div id="idxgc-search-results-header" class="grid-g">
       <div class="grid-u-1 grid-u-sm-1-2">
         <div id="idxgc-search-type-toggle">
         <?php 
@@ -419,5 +421,42 @@ function idxgcMetaData() {
       return "";  
   }
 }
+
+function idxgcCommunity( $atts ) {
+  ob_start();
+  
+  $output = '';
+ 
+  $pull_atts = shortcode_atts( array(
+      'list_area' => '',
+      'view' => ''
+  ), $atts );
+
+  $list_areas = explode(",", $pull_atts["list_area"]);
+  $list_areas_trimmed = array();
+  
+  $view = $pull_atts["view"];
+  
+  foreach($list_areas as $list_area) {
+    array_push($list_areas_trimmed, trim($list_area));
+  }
+  
+  global $idxClient;
+  
+  $args = array();
+  if (count($list_areas_trimmed) > 0)
+    $args["listAreas"] = $list_areas_trimmed;
+    
+  if ($view != "")
+    $args["view"] = $view;
+  
+  $results = $idxClient->getCommunityListings($args);
+  echo idxgcSearchResults($results->listings, $totalResultsCount = $results->count);
+  
+  $output_string = ob_get_contents();
+  ob_end_clean();
+  return $output_string;
+}
+
 
 ?>
