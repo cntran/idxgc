@@ -79,6 +79,15 @@ jQuery(document).ready(function($) {
       $("#list_area_" + getSlug($("#region").val())).show();
   }
   
+  // on property type select, set hidden list type field
+  $(".property_type").on("change", function() {
+    $("#list_type").val(this.value);
+  });
+
+  // bind idxgc search with lead capture
+  $(".idxgc-search").on("click", function() {
+    localStorage.idxgcMlsSearches = (+localStorage.idxgcMlsSearches || 0) + 1;
+  });
 });
 
 function getSlug(string) {

@@ -87,7 +87,7 @@
      .SumoSelect.disabled > .CaptionCont{border-color:#ccc;box-shadow:none;}
 
     /**Select all button**/
-    .SumoSelect .select-all{position: relative;border-bottom: 1px solid #ddd;background-color: #fff;padding: 8px 0 3px 35px;height: 20px;}
+    .SumoSelect .select-all{position: relative;border-bottom: 1px solid #ddd;background-color: #fff;padding: 8px 0 3px 35px; background: #F7F7F7; }
     .SumoSelect .select-all > span i{cursor:pointer;}
     .SumoSelect .select-all.partial > span i{background-color:#ccc;}
 

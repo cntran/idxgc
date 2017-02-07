@@ -20,8 +20,12 @@
 .grid-item-content {
   background: #FFF;
 }
-
-
+.idxgc-alert-red {
+  color: #ED4337;
+}
+.idxgc-alert-green {
+  color: #C0D890;
+}
 .idxgc-form select,
 .idxgc-form input[type="text"],
 .idxgc-form input[type="password"] {
@@ -40,8 +44,9 @@
   background-color: #F7F7F7;
   box-shadow: none;
   padding: 0 5px;
-  border-color: #FFF;
+  border: 0;
   border-radius: 0;
+  color: #000;
   background-position: right -15px center;
   padding-right: 20px;
   font-size: 14px;
@@ -52,7 +57,7 @@
 }
 .SumoSelect > .CaptionCont {
   background-color: #F7F7F7;
-  border: 1px solid #FFF;
+  border: 0;
   color: #000;
   font-size: 14px;
   font-family: sans-serif;
@@ -74,6 +79,9 @@
   background: #FFF;
   line-height: 32px;
   margin-bottom: 35px;
+}
+.idxgc-quick-search-wrapper .SumoSelect > .CaptionCont {
+  border: 1px solid #58595B;
 }
 .idxgc-quick-search .submit-button {
   margin-top: 15px;
@@ -129,6 +137,19 @@
 #idxgc-map-results {
   margin-bottom: 35px;
 }
+/* SUBSCRIBE POPUP */
+.idxgc-subscribe-header {
+  
+}
+#idxgcSubscribe {
+  z-index: 99999999999999;
+}
+#idxgcSubscribe h1 {
+  margin-bottom: 5px;
+}
+#idxgcSubscribe p {
+  font-size: 12px;
+}
 /* LISTING TEMPLATE */
 #idxgc-listing h1 {
   margin-bottom: 15px;
@@ -176,7 +197,7 @@
 }
 
 .idxgc-pagination {
-  text-align: right;
+  text-align: center;
   margin: 10px 0;
 }
 .idxgc-pagination a {
@@ -190,6 +211,7 @@
 .page-button {
   background: #F7F7F7;
   border: 1px solid #CCC;
+  border-right: 0;
   color: #CCC;
   margin: 0;
   padding: 5px 10px;
@@ -198,13 +220,16 @@
 }
 .idxgc-pager {
   font-size: 0;
+  display: block;
+  margin-top: 5px;
 }
 
 .page-button-left {
   margin-left: 10px;
 }
 .page-button-right {
-  border-left: 0;
+  border-right: 1px solid #CCC;
+  
 }
 #idxgc-listing-contact button {
   width: 100%;
@@ -263,6 +288,9 @@
 #idxgc-listings .listing-description .details {
   font-size: 13px;
 }
+#idxgc-lw-capture {
+  text-align: center;
+}
 
 /* IDXGC Listing */
 #idxgc-listing-actions .action {
@@ -277,11 +305,23 @@
   height: 18px;
 }
 #idxgc-listing-image {
- 
+  position: relative;
 }
 #idxgc-listing-image img {
   width: 100%;
 }
+#idxgc-listing-status {
+  background-color: #ED4337;
+  text-align: center;
+  color: #FFF;
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 5px 10px;
+  font-weight: bold;
+  
+}
+
 #idxgc-listing-content strong {
   margin-right: 5px;
 }
@@ -335,6 +375,10 @@
   }
   .idxgc-pagination {
     text-align: right;
+  }
+  .idxgc-pager {
+    display: inline-block;
+    margin-top: 0;
   }
   .idxgc-form select,
   .SumoSelect > .CaptionCont {

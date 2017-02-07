@@ -105,23 +105,37 @@ class IdxClient {
       $resultsPerPage = self::MAX_SEARCH_RESULTS;
     }
      
-    $searchType = $_REQUEST["search_type"];
-    $listArea = $_REQUEST["list_area"];
-    $priceMinimum = $_REQUEST["price_minimum"];
-    $priceMaximum = $_REQUEST["price_maximum"];
-    $price = $_REQUEST["price"];
-    $beds = $_REQUEST["beds"];
-    $baths = $_REQUEST["baths"];
-    $squareFootage = $_REQUEST["square_footage"];
-    $acreageMinimum = $_REQUEST["acreage_minimum"];
     $acreageMaximum = $_REQUEST["acreage_maximum"];
+    $acreageMinimum = $_REQUEST["acreage_minimum"];
+    $address_1 = $_REQUEST["address_1"];
+    $baths = $_REQUEST["baths"];
+    $beds = $_REQUEST["beds"];
+    $city = $_REQUEST["city"];
+    $dom = $_REQUEST["dom"];
+    $garage = $_REQUEST["garage"];
+    $squareFootage = $_REQUEST["square_footage"];
+    $listArea = $_REQUEST["list_area"];
     $listOfficeId = $_REQUEST["list_office_id"];
     $listOfficeName = $_REQUEST["list_office_name"];
+    $listOfficeNames = $_REQUEST["list_office_names"];
     $listAgentEmails = $_REQUEST["list_agent_emails"];
-    $view = $_REQUEST["view"];
-    $address_1 = $_REQUEST["address_1"];
-    $city = $_REQUEST["city"];
+    $listAgentIds = $_REQUEST["list_agent_ids"];
     $mlsNumbers = $_REQUEST["mls_numbers"];
+    $price = $_REQUEST["price"];
+    $priceDecreasesSince = $_REQUEST["price_decreases_since"];
+    $priceIncreasesSince = $_REQUEST["price_increases_since"];
+    $priceMaximum = $_REQUEST["price_maximum"];
+    $priceMinimum = $_REQUEST["price_minimum"];
+    $priceUpdatesSince = $_REQUEST["price_updates_since"];
+    $searchType = $_REQUEST["search_type"];
+    $setting = $_REQUEST["setting"];
+    $source = $_REQUEST["source"];
+    $view = $_REQUEST["view"];
+    $yearBuilt = $_REQUEST["year_built"];
+    
+    if (!is_array($mlsNumbers) && $mlsNumbers != "") {
+      $mlsNumbers = explode(",", $mlsNumbers);
+    }
      
     $propertyType = $idxUI->getSlug($searchType);
     $listType = $_REQUEST["property_type_$propertyType"];
@@ -147,6 +161,10 @@ class IdxClient {
     
     if ($searchType !== "" && $searchType != NULL) {
       $where["type"] = $searchType;
+    }
+    
+    if ($dom !== "" && $dom != NULL) {
+      $where["dom"] = array("\$lte" => (int)$dom);
     }
     
     if ($squareFootage !== "" && $squareFootage != NULL) {
@@ -207,18 +225,47 @@ class IdxClient {
     if ($listOfficeName !== "" && $listOfficeName != NULL) {
       $where["list_office_name"] = $listOfficeName;
     }
+    if (count($listOfficeNames) > 0) {
+      $where["list_office_name"] = array("\$in" => $listOfficeNames);
+    }
     if (count($listAgentEmails) > 0) {
       $where["list_agent_email"] = array("\$in" => $listAgentEmails);
     }
-    if ($view !== "" && $view != NULL) {
-      $where["view"] = array("\$regex" => $view);
+    if (count($listAgentIds) > 0) {
+      $where["list_agent_id"] = array("\$in" => $listAgentIds);
     }
+    
+    if (!is_array($view) && $view != "") {
+      $view = explode("|", $view);
+      $where["view"] = $view;
+    }
+    else if (is_array($view) && count($view) > 0) {
+      $where["view"] = $view;
+    }
+    if (!is_array($setting) && $setting != "") {
+      $setting = explode("|", $setting);
+      $where["setting"] = $setting;
+    }
+    else if (is_array($setting) && count($setting) > 0) {
+      $where["setting"] = $setting;
+    }
+    
     if ($address_1 !== "" && $address_1 != NULL) {
       $where["address_1"] = array("\$regex" => $address_1);
     }
     if ($city !== "" && $city != NULL) {
       $where["city"] = $city;
     }
+    if ($source !== "" && $source != NULL) {
+      $where["source"] = $source;
+    }
+    if ($garage !== "" && $garage != NULL) {
+      $where["garage"] = $garage;
+    }
+    if ($yearBuilt !== "" && $yearBuilt != NULL) {
+      $where["year_built"] = $yearBuilt;
+    }
+    
     
     $options = array();
     if (count($where) > 0)
@@ -228,6 +275,16 @@ class IdxClient {
     $options["skip"] = $resultsStartIndex;
     $options["sort"] = array("list_price" => -1, "address_1" => 1);
     
+    if ($priceUpdatesSince !== "" && $priceUpdatesSince != NULL) {
+      $options["price_updates_since"] = "$priceUpdatesSince.days.ago";
+    }
+    if ($priceIncreasesSince !== "" && $priceIncreasesSince != NULL) {
+      $options["price_increases_since"] = "$priceIncreasesSince.days.ago";
+    }
+    if ($priceDecreasesSince !== "" && $priceDecreasesSince != NULL) {
+      $options["price_decreases_since"] = "$priceDecreasesSince.days.ago";
+    }
+  //  $options["since"] = "3.day.ago";
     return $options;
   }
 
@@ -244,7 +301,7 @@ class IdxClient {
     return $response;
   }
   
-  function getFeaturedListings($args = array("mlsNumbers" => array(), "listAgentEmails" => array(), "listOfficeName" => array()) ) { //$mlsNumbers = array(), $listAgentEmails = array(), $listOfficeName = "") {
+  function getFeaturedListings($args = array("mlsNumbers" => array(), "listAgentEmails" => array(), "listAgentIds" => array(), "listOfficeName" => array(), "listOfficeNames" => array()) ) { //$mlsNumbers = array(), $listAgentEmails = array(), $listOfficeName = "") {
     
     $errorMessage = "";
 
@@ -254,16 +311,6 @@ class IdxClient {
       $featuredListings = array();
       $agentListings = array();
       $officeListings = array();
-      
-      if ($args["listOfficeName"] != "") {
-        $_REQUEST["list_agent_emails"] = null;
-        $_REQUEST["mls_numbers"] = null;
-        $_REQUEST["list_office_name"] = $args["listOfficeName"];
-        $searchParams = $this->searchParams($resultsPerPage = 0);
-        $officeResults = $this->getListings($searchParams);
-        $officeListings = $officeResults->listings;
-        $listings = array_merge($officeListings, $listings);
-      }
       
       if (is_array($args["mlsNumbers"]) && count($args["mlsNumbers"]) > 0) {
         $_REQUEST["list_agent_emails"] = null;
@@ -275,6 +322,26 @@ class IdxClient {
         $listings = array_merge($featuredListings, $listings);
       }
       
+      if ($args["listOfficeName"] != "") {
+        $_REQUEST["list_agent_emails"] = null;
+        $_REQUEST["mls_numbers"] = null;
+        $_REQUEST["list_office_name"] = $args["listOfficeName"];
+        $searchParams = $this->searchParams($resultsPerPage = 0);
+        $officeResults = $this->getListings($searchParams);
+        $officeListings = $officeResults->listings;
+        $listings = array_merge($officeListings, $listings);
+      }
+      
+      if (is_array($args["listOfficeNames"]) && count($args["listOfficeNames"]) > 0) {
+        $_REQUEST["list_agent_emails"] = null;
+        $_REQUEST["mls_numbers"] = null;
+        $_REQUEST["list_office_names"] = $args["listOfficeNames"];
+        $searchParams = $this->searchParams($resultsPerPage = 0);
+        $officeResults = $this->getListings($searchParams);
+        $officeListings = $officeResults->listings;
+        $listings = array_merge($officeListings, $listings);
+      }
+      
       if (is_array($args["listAgentEmails"]) && count($args["listAgentEmails"]) > 0) {
         $_REQUEST["mls_numbers"] = null;
         $_REQUEST["list_office_name"] = null;
@@ -284,7 +351,16 @@ class IdxClient {
         $agentListings = $agentResults->listings;
         $listings = array_merge($agentListings, $listings);
       }
-      
+      if (is_array($args["listAgentIds"]) && count($args["listAgentIds"]) > 0) {
+        $_REQUEST["mls_numbers"] = null;
+        $_REQUEST["list_office_name"] = null;
+        $_REQUEST["list_agent_emails"] = null;
+        $_REQUEST["list_agent_ids"] = $args["listAgentIds"];
+        $searchParams = $this->searchParams($resultsPerPage = 0);
+        $agentResults = $this->getListings($searchParams);
+        $agentListings = $agentResults->listings;
+        $listings = array_merge($agentListings, $listings);
+      }
       
       $listingMlsNumbers = array();
       $listingsToReturn = array();
@@ -307,7 +383,7 @@ class IdxClient {
     
   }
   
-  function getCommunityListings($args = array("listAreas" => array(), "view" => "")) { 
+  function getCommunityListings($args = array("listAreas" => array(), "view" => "", "setting" => "")) { 
          
     $listAreasTrimmed = array();
     $listAreas = $args["listAreas"];
@@ -318,11 +394,14 @@ class IdxClient {
     $listAreasTrimmed = array_filter($listAreasTrimmed);
     if ($args["view"] != "")
       $_REQUEST["view"] = $args["view"];
+    
+    if ($args["setting"] != "")
+      $_REQUEST["setting"] = $args["setting"];
       
     if (count($listAreasTrimmed) > 0)
       $_REQUEST["list_area"] = $listAreasTrimmed;
     
-    $_REQUEST["search_type"] = "RESIDENTIAL";
+    //$_REQUEST["search_type"] = "RESIDENTIAL";
     //$_REQUEST["property_type_residential"] = "Single Family";
     
     $searchParams = $this->searchParams($resultsPerPage = self::RESULTS_PER_PAGE);
@@ -333,13 +412,29 @@ class IdxClient {
   }
   
   function getLocations() {
+    
     $args = array(
       'method' => 'GET',
       'requestUrl' => 'api/listings/locations/' 
     );
+    
+    $source = $_REQUEST["source"];
+    if ($source !== "" && $source != NULL) {
+      $where["source"] = $source;
+    }
+    
+    $options = array();
+    if (count($where) > 0)
+      $options["where"] = $where;
+      
+    if (count($options) > 0) {
+      $args['options'] = $options;
+    }
     $response = $this->request($args);
     return $response->locations;
   }
+  
+
   
   function getLocationsByRegion($region) {
     $args = array(
@@ -418,6 +513,20 @@ class IdxClient {
       'method' => 'GET',
       'requestUrl' => 'api/listings/search_form_data/'
     );
+    
+    $source = $_REQUEST["source"];
+    if ($source !== "" && $source != NULL) {
+      $where["source"] = $source;
+    }
+    
+    $options = array();
+    if (count($where) > 0)
+      $options["where"] = $where;
+      
+    if (count($options) > 0) {
+      $args['options'] = $options;
+    }
+    
     $response = $this->request($args);
     return $response;
   }
@@ -442,6 +551,10 @@ class IdxClient {
       $options = $args['options'];
       unset($options["where"]);
       unset($options["sort"]);
+      unset($options["since"]);
+      unset($options["price_updates_since"]);
+      unset($options["price_increases_since"]);
+      unset($options["price_decreases_since"]);
       unset($options["list_type"]);
       $url .= "?" . http_build_query($options);
     }
@@ -459,6 +572,19 @@ class IdxClient {
     if (isset($args['options']['list_type'])) {
       $url .= "&list_type=" . urlencode(json_encode($args['options']['list_type']));
     }
+    if (isset($args['options']['since'])) {
+      $url .= "&since=" . $args['options']['since'];
+    }
+    if (isset($args['options']['price_updates_since'])) {
+      $url .= "&price_updates_since=" . $args['options']['price_updates_since'];
+    }
+    if (isset($args['options']['price_increases_since'])) {
+      $url .= "&price_increases_since=" . $args['options']['price_increases_since'];
+    }
+    if (isset($args['options']['price_decreases_since'])) {
+      $url .= "&price_decreases_since=" . $args['options']['price_decreases_since'];
+    }
+    
     curl_setopt($ch, CURLOPT_URL, $url);
     
     if ($args['method'] == 'POST' || $args['method'] == 'PUT' || $args['method'] == 'DELETE') {

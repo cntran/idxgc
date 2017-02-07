@@ -12,9 +12,12 @@ class IdxUI {
     ?>
     
     <div id="idxgc-listing">
-      <h1><?php echo $listing->address_1; ?></h1>
+      <h1><?php echo "$listing->address_1, $listing->city, $listing->state $listing->zip"; ?></h1>
       <div id="idxgc-listing-image">
         <img src="<?php echo $imageSrc; ?>" />
+        <?php if ($listing->status != "ACTIVE") : ?>
+          <div id="idxgc-listing-status"><?php echo $listing->status; ?></div>
+        <?php endif; ?>
       </div>
       <div id="idxgc-listing-actions">
         <div class="grid-g">
@@ -24,7 +27,7 @@ class IdxUI {
             </a>
           </div>
           <div class="grid-u-6-24 action">
-            <a href="mailto:?subject=A Property listing for you&body=<?php echo $listing->address_1; ?> - <?php echo IDXConfig::baseUrl() . "/listing/?mls_number=" . $listing->mls_number; ?>">
+            <a href="mailto:?subject=A Property listing for you&body=<?php echo $listing->address_1; ?> - <?php echo IDXConfig::baseUrl() . "/mls/?mls_number=" . $listing->mls_number; ?>">
             <img src="<?php echo IDXConfig::imageDir(); ?>/idxgc-listing-email-icon.png" />&nbsp;email a friend
             </a>  
           </div>
@@ -41,22 +44,28 @@ class IdxUI {
         <p><?php echo str_replace("�", "", $listing->description); ?></p>
         <h2>Property Details</h2>
         <div class="grid-g">
-          <div class="grid-u-1 grid-u-md-1-2">
+          <div class="grid-u-1 grid-u-md-10-24">
             <strong>Price:</strong>$<?php echo number_format($listing->list_price); ?><br />
             <strong>Address:</strong><?php echo $listing->address_1; ?><br />
             <strong>City:</strong><?php echo $listing->city; ?><br />
             <strong>State:</strong><?php echo $listing->state; ?><br />
             <strong>Zip:</strong><?php echo $listing->zip; ?><br />
           </div>
-          <div class="grid-u-1 grid-u-md-1-2">
-            <strong>MLS#:</strong><?php echo $listing->mls_number; ?><br />
+          <div class="grid-u-1 grid-u-md-7-24">
             <?php if ($listing->type == "RESIDENTIAL") : ?>
             <strong>Square Feet:</strong><?php echo $listing->square_footage; ?><br />
             <strong>Bedrooms:</strong><?php echo $listing->beds; ?><br />
             <strong>Bathrooms:</strong><?php echo $listing->baths; ?><br />
             <?php endif; ?>
+          </div>
+          <div class="grid-u-1 grid-u-md-7-24">
+            <strong>MLS#:</strong><?php echo $listing->mls_number; ?><br />
             <?php if ($listing->list_type != "") : ?>
             <strong>Type:</strong><?php echo $listing->list_type; ?><br />
+            <?php endif; ?>
+            <strong>DOM:</strong><?php echo $listing->dom; ?><br />
+            <?php if ($listing->virtual_tour != "") : ?>
+            <strong><a href="<?php echo $listing->virtual_tour; ?>" target="_blank">Virtual Tour</a></strong><br />
             <?php endif; ?>
           </div>
         </div>
@@ -72,9 +81,11 @@ class IdxUI {
   
   public function listingPhotos($listing) {
     if ($listing->picture_count > 0) {
+       
       $photos = array();
       for ($i = 0; $i < $listing->picture_count; $i++) {
-        $photos[] = $listing->image_path . "/" . $listing->mls_number . "-" . $i;
+        $photoUrl = $listing->image_path . "/" . $listing->mls_number . "-" . $i;
+        $photos[] = $photoUrl;
       }
       return $photos;
     }
@@ -118,20 +129,29 @@ class IdxUI {
     <div class="idxgc-pagination">
     Displaying  <?php echo ($currentPage - 1) * $resultsPerPage + 1; ?> - <?php if ($currentPage * $resultsPerPage > $resultsCount * 1) { echo $resultsCount; } else { echo ($currentPage * $resultsPerPage); } ?> of <?php echo $resultsCount; ?> listings.
       <span class="idxgc-pager">
+        
         <?php if ($currentPage > 1) : ?>
+        <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?'); ?>/?pg=1&<?php echo $searchParams; ?>">
+          <span class="page-button page-button-left">First</span>
+        </a>
         <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?'); ?>/?pg=<?php echo $currentPage - 1; ?>&<?php echo $searchParams; ?>">
-          <span class='page-button page-button-left'><span class='fa fa-chevron-left'></span></span>
+          <span class='page-button'><span class='fa fa-chevron-left'></span></span>
         </a>
         <?php else: ?>
-          <span class='page-button page-button-left'><span class='fa fa-chevron-left'></span></span>
+          <span class="page-button page-button-left">First</span>
+          <span class='page-button'><span class='fa fa-chevron-left'></span></span>
         <?php endif; ?>
     
         <?php if ($currentPage < $totalPages) : ?>
         <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?'); ?>/?pg=<?php echo $currentPage + 1; ?>&<?php echo $searchParams; ?>">
-          <span class='page-button page-button-right'><span class='fa fa-chevron-right'></span></span>
+          <span class='page-button'><span class='fa fa-chevron-right'></span></span>
+        </a>
+        <a href="<?php echo strtok($_SERVER["REQUEST_URI"],'?'); ?>/?pg=<?php echo $totalPages; ?>&<?php echo $searchParams; ?>">
+          <span class="page-button page-button-right">Last</span>
         </a>
         <?php else: ?>
-          <span class='page-button page-button-right'><span class='fa fa-chevron-right'></span></span>
+          <span class='page-button'><span class='fa fa-chevron-right'></span></span>
+          <span class="page-button page-button-right">Last</span>
         <?php endif; ?>
       </span>
     </div>
@@ -151,19 +171,33 @@ class IdxUI {
     $permalink .= $permalinkSuffix . "-" . $listing->mls_number;
     return $permalink;
   }
+
   
-  public function searchResults($listings) {
+  public function searchResults($listings, $limit = 0) {
     ob_start();
+    
+    $showPriceChange = false;
+    if ($_REQUEST["price_updates_since"] || $_REQUEST["price_decreases_since"] || $_REQUEST["price_increases_since"]) {
+      $showPriceChange = true;
+    }
+    
     ?>
     <div id="idxgc-listings">
       <div class="grid-g">
     <?php $count = 1; ?>
     <?php foreach ($listings as $listing) : ?>
+      <?php 
+        if ($limit > 0) {
+          if ($count > $limit)
+            break;
+        }
+      ?>
       <?php
         $imageSrc = "https://placeholdit.imgix.net/~text?txtsize=38&txt=&w=300&h=300&txttrack=0";
         if ($listing->picture_count > 0) {
           $imageSrc = $listing->image_path . "/" . $listing->mls_number . "-0.jpg";
         }
+        
         $gridItemClass = "grid-l-item";
         if ($count % 3 == 1)
           $gridItemClass = "grid-l-item";
@@ -184,6 +218,22 @@ class IdxUI {
                 </div>
                 <div class="grid-u-2-5 price">
                   <span>$<?php echo number_format($listing->list_price); ?></span>
+                  <?php if ($showPriceChange) : ?>
+                    <?php 
+                      $priceChange = $listing->list_price - $listing->list_price_previous;
+                      $priceDelta = "";
+                      $priceDeltaClass = "idxgc-alert-red";
+                      if ($priceChange > 0) {
+                        $priceDelta = "+$" . number_format(abs($priceChange));  
+                        $priceDeltaClass = "idxgc-alert-green";
+                      }
+                      else {
+                        $priceDelta = "-$" . number_format(abs($priceChange)); 
+                        $priceDeltaClass = "idxgc-alert-red";
+                      }
+                    ?>
+                    <div><em class="<?php echo $priceDeltaClass; ?>">(<?php echo $priceDelta; ?>)</em></div>
+                  <?php endif; ?>
                 </div>
                 <div class="grid-u-3-5 details">
                   <?php echo $listing->city; ?>, <?php echo $listing->state; ?><br />
@@ -192,7 +242,12 @@ class IdxUI {
                   <?php endif; ?>
                 </div>
                 <div class="grid-u-2-5 details right">
-                  <?php echo $listing->list_type; ?><br />
+                  <?php if ($listing->list_type == "Condominium/Townhouse") : ?> 
+                      Condo/Townhouse
+                  <?php else : ?>
+                      <?php echo $listing->list_type; ?>
+                  <?php endif; ?>
+                  <br />
                   <a href="<?php echo $this->listingPermalink($listing); ?>">View</a>
                 </div>
               </div>
@@ -276,19 +331,33 @@ class IdxUI {
     return $output_string;
   }  
   
-  public function clientRequestForm($type, $listingId = "", $height = 550, $popup = false) {
+  public function socialWall() {
+    ob_start();
+    $iframeUrl = IdxConfig::HOST_NAME . "users/social_wall/" . IdxConfig::apiKey();
+    ?>
+    <iframe id="idxgc-frame" scrolling="no" style="width:100%;height: 0;" frameborder="0" src="<?php echo $iframeUrl; ?>"></iframe>
+    
+    <script type="text/javascript">
+      idxgc.events.resizeIframeOnLoad();
+    </script>    
+    <?php
+    $output_string = ob_get_contents();
+    ob_end_clean();
+    return $output_string;
+  }
+  
+  public function clientRequestForm($type, $listingId = "", $height = 450, $popup = false) {
     ob_start();
     
-    if ($popup == true)
-      $iframeStyle = "z-index:1;position:absolute;top: 35px;left:1%;right: 1%;width:98%;height:130%;";
-    else
+    if ($popup == true) {
+      $iframeStyle = "width: 100%; height: ". $height . "px;";
+    }
+    else {
       $iframeStyle = "width: 100%; height: 100%;";
+    }
     ?>
     
-    <iframe id="idxgc-frame" class="idxgc-frame" scrolling="no" style="<?php echo $iframeStyle; ?>" frameborder="0" src="<?php echo IdxConfig::HOST_NAME; ?>clients/client_requests/new?id=<?php echo IdxConfig::apiKey(); ?>&type=<?php echo $type; ?>&listing_id=<?php echo $listingId; ?>"></iframe>
-    <?php if ($popup == true) : ?>
-      <div style="position: relative;height:<?php echo $height; ?>px"></div>
-    <?php endif; ?>
+    <iframe id="idxgc-frame" class="idxgc-frame" scrolling="yes" style="<?php echo $iframeStyle; ?>" frameborder="0" src="<?php echo IdxConfig::HOST_NAME; ?>clients/client_requests/new?id=<?php echo IdxConfig::apiKey(); ?>&type=<?php echo $type; ?>&listing_id=<?php echo $listingId; ?>"></iframe>
     
     <?php if ($popup == false) : ?>
     <script type="text/javascript">
@@ -303,9 +372,34 @@ class IdxUI {
 
   }
   
+  public function captureListingWatchForm($height = 400, $popup = false) {
+    ob_start();
+    
+    if ($popup == true) {
+      $iframeStyle = "width: 100%; height: ". $height . "px;";
+    }
+    else {
+      $iframeStyle = "width: 100%; height: 100%;";
+    }
+      
+    $searchQueryString = $_SERVER["QUERY_STRING"];
+    ?>
+    
+    <iframe id="idxgc-frame" class="idxgc-frame" scrolling="yes" style="<?php echo $iframeStyle; ?>" frameborder="0" src="<?php echo IdxConfig::HOST_NAME; ?>clients/new_listing_watch?id=<?php echo IdxConfig::apiKey(); ?>&<?php echo $searchQueryString; ?>"></iframe>
+    
+    <?php if ($popup == false) : ?>
+    <script type="text/javascript">
+      idxgc.events.resizeIframeOnLoad();
+    </script>    
+    <?php endif; ?>
+    
+    <?php
+    $output_string = ob_get_contents();
+    ob_end_clean();
+    return $output_string;
+  }
   
-  
-  public function stateRegionAndLocationSelects($searchFormData, $selectFormType = "") {
+  public function stateRegionAndLocationSelects($searchFormData, $selectFormType = "", $excludeLocations = array()) {
     
     ob_start();
     
@@ -324,6 +418,7 @@ class IdxUI {
     foreach ($searchFormData->locations as $state => $regions) {
       $locationsByRegion = array();
       foreach ($regions as $region => $regionLocations) {
+        $regionLocations = array_diff($regionLocations, $excludeLocations);
         $locationsByRegion[$region] = $regionLocations;         
       }
       $locationsByState[$state] = $locationsByRegion;
@@ -358,7 +453,7 @@ class IdxUI {
       <?php endforeach; ?>
     </div>
     <div class="<?php echo $gridClass; ?> <?php if ($selectFormType == "advanced") :?>grid-box-right-edge<?php else: ?>grid-box-edge<?php endif;?>">
-      <select id="list_area" name="list_area" class="list_area">
+      <select id="list_area" name="list_area[]" class="list_area" multiple="multiple">
         <option value="">Location</option>
       </select>
       <?php foreach ($locationsByState as $locationByStateKey => $locationByStateValue) : ?>
@@ -389,7 +484,7 @@ class IdxUI {
     return $output_string;
   }
   
-  public function regionAndLocationSelects($searchFormData, $selectFormType = "") {
+  public function regionAndLocationSelects($searchFormData, $selectFormType = "", $excludeLocations = array()) {
     ob_start();    
     
     
@@ -407,6 +502,7 @@ class IdxUI {
     $locationsByRegion = array();
     foreach ($searchFormData->locations as $state => $stateRegions) {
       foreach ($stateRegions as $region => $regionLocations) {
+        $regionLocations = array_diff($regionLocations, $excludeLocations);
         $locationsByRegion[$region] = $regionLocations;
       }
     }
@@ -428,7 +524,7 @@ class IdxUI {
         </select>
     </div>
     <div class="<?php echo $gridClass; ?> <?php if ($selectFormType == "advanced") :?>grid-box-right-edge<?php else: ?>grid-box-edge<?php endif;?>">
-      <select id="list_area" name="list_area" class="list_area">
+      <select id="list_area" name="list_area[]" class="list_area" multiple="multiple">
         <option value="">Location</option>
       </select>
       <?php foreach ($locationsByRegion as $locationByRegionKey => $locationByRegionValue) : ?>
@@ -454,7 +550,7 @@ class IdxUI {
     
   }
   
-  public function locationSelect($searchFormData, $selectFormType = "") {
+   public function locationSelect($searchFormData, $selectFormType = "", $excludeLocations = array()) {
     ob_start();
    
     $locations = array();
@@ -464,6 +560,7 @@ class IdxUI {
       }
     }
     $locations = array_unique($locations);
+    $locations = array_diff($locations, $excludeLocations);
     sort($locations);
     
     ?>
@@ -486,10 +583,67 @@ class IdxUI {
     return $output_string;
   }
   
-  
-  public function searchForm($action, $searchFormType = "") {
+  public function viewSelect($searchFormData, $exclude = array()) {
     ob_start();
     
+    $views = array();
+    $views = $searchFormData->views;
+    $views = array_unique($views);
+    $views = array_diff($views, $exclude);
+    sort($views);
+    
+    $viewRequest = $_REQUEST["view"]; 
+    if (!is_array($viewRequest))
+      $viewRequest = [$viewRequest];
+    if ($viewRequest == NULL)
+      $viewRequest = [];
+    ?>
+    
+    <select id="view" name="view[]" class="view" multiple="multiple">
+      <?php foreach ($views as $view) : ?>
+        <option value="<?php echo $view; ?>" <?php if (in_array($view, $viewRequest)): ?>selected<?php endif; ?>><?php echo $view; ?></option>
+      <?php endforeach; ?>
+    </select>
+    <?php
+    $output_string = ob_get_contents();
+    ob_end_clean();
+    return $output_string;
+  }
+  
+  public function settingSelect($searchFormData, $exclude = array()) {
+    ob_start();
+    
+    $settings = array();
+    $settings = $searchFormData->settings;
+    $settings = array_unique($settings);
+    $settings = array_diff($settings, $exclude);
+    sort($settings);
+    
+    $settingRequest = $_REQUEST["setting"]; 
+    if (!is_array($settingRequest))
+      $settingRequest = [$settingRequest];
+    if ($settingRequest == NULL)
+      $settingRequest = [];
+    ?>
+    
+    <select id="setting" name="setting[]" class="setting" multiple="multiple">
+      <?php foreach ($settings as $setting) : ?>
+        <option value="<?php echo $setting; ?>" <?php if (in_array($setting, $settingRequest)): ?>selected<?php endif; ?>><?php echo $setting; ?></option>
+      <?php endforeach; ?>
+    </select>
+    <?php
+    $output_string = ob_get_contents();
+    ob_end_clean();
+    return $output_string;
+  }
+  
+  public function searchForm($action, $searchFormType = "", $excludeLocations = array()) {
+    ob_start();
+    
+    if (!is_array($searchFormType) && $searchFormType != "") {
+      $searchFormType = array("location" => $searchFormType, "type" => "basic");  
+    }
+  
     global $idxClient;
     $searchFormData = $idxClient->getSearchFormData();
     
@@ -507,14 +661,14 @@ class IdxUI {
         
         <?php
           $gridClass = "grid-u-md-1-3";
-          if ($searchFormType == "state") {
-            echo $this->stateRegionAndLocationSelects($searchFormData, $selectFormType = "advanced"); 
+          if ($searchFormType["location"] == "state") {
+            echo $this->stateRegionAndLocationSelects($searchFormData, $selectFormType = "advanced", $excludeLocations); 
           }
-          elseif ($searchFormType == "region") {
-            echo $this->regionAndLocationSelects($searchFormData, $selectFormType = "advanced");
+          elseif ($searchFormType["location"] == "region") {
+            echo $this->regionAndLocationSelects($searchFormData, $selectFormType = "advanced", $excludeLocations);
           }
           else {
-            echo $this->locationSelect($searchFormData, $selectFormType = "advanced");
+            echo $this->locationSelect($searchFormData, $selectFormType = "advanced", $excludeLocations);
             $gridClass = "grid-u-md-1-4";
           }
         ?>
@@ -540,6 +694,7 @@ class IdxUI {
                 <?php endforeach; ?>
               </select>
             <?php endforeach; ?>
+            <input type="hidden" id="list_type" name="list_type" value="<?php echo $_REQUEST["list_type"]; ?>" />
         </div>
         <div class="grid-u-1 <?php echo $gridClass; ?> grid-box-right-edge">
           <select id="price" name="price">
@@ -560,7 +715,7 @@ class IdxUI {
           <select id="beds" name="beds">
             <option value="">Bedrooms</option>
             <?php for ($i = 6; $i > 0; $i--): ?>
-              <option value="<?php echo $i; ?>" <?php if ($_REQUEST["beds"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>&nbsp;Bedrooms</option>
+              <option value="<?php echo $i; ?>" <?php if ($_REQUEST["beds"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>+&nbsp;Bedrooms</option>
             <?php endfor; ?>
           </select>
         </div>
@@ -568,7 +723,7 @@ class IdxUI {
           <select id="baths" name="baths">
             <option value="">Bathrooms</option>
             <?php for ($i = 6; $i > 0; $i--): ?>
-              <option value="<?php echo $i; ?>" <?php if ($_REQUEST["baths"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>&nbsp;Bathrooms</option>
+              <option value="<?php echo $i; ?>" <?php if ($_REQUEST["baths"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>+&nbsp;Bathrooms</option>
             <?php endfor; ?>
           </select>
         </div>
@@ -584,16 +739,47 @@ class IdxUI {
             <option value="10000" <?php if ($_REQUEST["square_footage"] == "10000"): ?>selected<?php endif; ?>>10000+</option>
           </select>
         </div>
+        
+        <?php if ($searchFormType["type"] == "advanced") : ?>
+           <div class="grid-u-1 grid-u-md-6-24 grid-box-right-edge">
+            <select id="year_built" name="year_built">
+                <option value="">Year Built</option>
+                <?php for ($i = date("Y"); $i > date("Y") - 50; $i--): ?>
+                  <option value="<?php echo $i; ?>" <?php if ($_REQUEST["year_built"] == $i): ?>selected<?php endif; ?>>>=&nbsp;<?php echo $i; ?></option>
+                <?php endfor; ?>
+              </select>
+           </div>
+        
+           <div class="grid-u-1 grid-u-md-6-24 grid-box-left-edge">
+              <select name="garage" id="garage">
+                <option value="">Garage</option>
+                <option value="1" <?php if ($_REQUEST["garage"] == "1"): ?>selected<?php endif; ?> >1+ Car Garage</option>
+                <option value="2" <?php if ($_REQUEST["garage"] == "2"): ?>selected<?php endif; ?>>2+ Car Garage</option>
+                <option value="3" <?php if ($_REQUEST["garage"] == "3"): ?>selected<?php endif; ?>>3+ Car Garage</option>
+                <option value="4" <?php if ($_REQUEST["garage"] == "4"): ?>selected<?php endif; ?>>4+ Car Garage</option>
+              </select>
+           </div>
+           
+           <div class="grid-u-1 grid-u-md-6-24 grid-box">
+            <?php echo $this->settingSelect($searchFormData, $exclude = array()); ?>
+           </div>
+           
+           <div class="grid-u-1 grid-u-md-6-24 grid-box">
+            <?php echo $this->viewSelect($searchFormData, $exclude = array("Panoramic lake", "Panoramic-lake")); ?>
+           </div> 
+        <?php endif; ?>
                 
         <div class="grid-u-1 grid-u-md-6-24 grid-box-right-edge">
           <input type="hidden" id="result_view" name="result_view" value="<?php echo $_REQUEST["result_view"]; ?>" />
-          <input id="idxgc-search-button" type="submit" value="Search MLS" />
+          <input id="idxgc-search-button" class="idxgc-search" type="submit" value="Search MLS" />
         </div>
       </div>
     </form>
     <script>
       jQuery(document).ready(function($) {
-        $(".list_area").SumoSelect({placeholder: 'Location'});
+        $(".list_area").SumoSelect({placeholder: 'Location', prefix: 'Location:', search: true, searchText: 'Select locations (type to search).', selectAll: true});
+        $(".view").SumoSelect({placeholder: 'View', prefix: 'View:'});
+        $(".setting").SumoSelect({placeholder: 'Setting', prefix: 'Setting:'});
       });
     </script>
     <?
@@ -602,8 +788,7 @@ class IdxUI {
     return $output_string;
   }
   
-  
-  public function quickSearchForm($action, $searchFormType = "") {
+  public function quickSearchForm($action, $searchFormType = "", $excludeLocations = array()) {
     ob_start();
     
     global $idxClient;
@@ -626,13 +811,13 @@ class IdxUI {
           <div class="grid-g">
             <?php 
             if ($searchFormType == "state") {
-              echo $this->stateRegionAndLocationSelects($searchFormData, $selectFormType = "basic"); 
+              echo $this->stateRegionAndLocationSelects($searchFormData, $selectFormType = "basic", $excludeLocations); 
             }
             elseif ($searchFormType == "region") {
-              echo $this->regionAndLocationSelects($searchFormData, $selectFormType = "basic");
+              echo $this->regionAndLocationSelects($searchFormData, $selectFormType = "basic", $excludeLocations);
             }
             else {
-              echo $this->locationSelect($searchFormData, $selectFormType = "basic");
+              echo $this->locationSelect($searchFormData, $selectFormType = "basic", $excludeLocations);
               $gridClass = "grid-u-1";
             }
             ?>
@@ -675,7 +860,7 @@ class IdxUI {
               <select id="beds" name="beds">
                 <option value="">Bedrooms</option>
                 <?php for ($i = 6; $i > 0; $i--): ?>
-                  <option value="<?php echo $i; ?>" <?php if ($_REQUEST["beds"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>&nbsp;Bedrooms</option>
+                  <option value="<?php echo $i; ?>" <?php if ($_REQUEST["beds"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>+&nbsp;Bedrooms</option>
                 <?php endfor; ?>
               </select>
             </div>
@@ -683,7 +868,7 @@ class IdxUI {
               <select id="baths" name="baths">
                 <option value="">Bathrooms</option>
                 <?php for ($i = 6; $i > 0; $i--): ?>
-                  <option value="<?php echo $i; ?>" <?php if ($_REQUEST["baths"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>&nbsp;Bathrooms</option>
+                  <option value="<?php echo $i; ?>" <?php if ($_REQUEST["baths"] == $i): ?>selected<?php endif; ?>><?php echo $i; ?>+&nbsp;Bathrooms</option>
                 <?php endfor; ?>
               </select>
             </div>
@@ -811,6 +996,15 @@ class IdxUI {
     return $url;
   }
   
+  function fileExists($file) {
+    $file_headers = @get_headers($file);
+    if(!$file_headers || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
 }
 
 ?>

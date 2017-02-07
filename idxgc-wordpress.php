@@ -1,5 +1,7 @@
 <?php
 
+if ( function_exists( 'idxgcSocialWall' ) )
+  add_shortcode( 'idxgcSocialWall', 'idxgcSocialWall' );
 if ( function_exists( 'idxgcClientPortal' ) )
   add_shortcode( 'idxgcClientPortal', 'idxgcClientPortal' );
 if ( function_exists( 'idxgcListing' ) )
@@ -147,6 +149,11 @@ function idxgcClientPortal() {
   echo $idxUI->clientPortal();  
 }
 
+function idxgcSocialWall() {
+  global $idxUI; 
+  echo $idxUI->socialWall();  
+}
+
 function idxgcListing() {
   
   global $idxClient, $idxUI;
@@ -205,6 +212,8 @@ function idxgcListing() {
       Northern Nevada Regional Listing Service.
       <?php elseif ($listing->source == "ivmls") : ?>
       Incline Village Multiple Listing Service.
+      <?php elseif ($listing->source == "sltmls") : ?>
+      South Tahoe Association of Realtors Multiple Listing Service.
       <?php endif; ?>
       All rights reserved.</p>
       <img src="<?php echo IDXConfig::imageDir(); ?>/broker-reciprocity.jpg" width="100"/><br />
@@ -239,15 +248,79 @@ function idxgcListing() {
 <?php
 }
 
-function idxgcSearchForm($action = "", $searchFormType = "") {
+function idxgcSubscribePopup($header = "") {
   global $idxUI;
-  echo $idxUI->searchForm($action, $searchFormType);
+  ?>
+  <div class="reveal tiny" id="idxgcSubscribe" data-reveal>
+    <div class="idxgc-subscribe-header">
+      <h1>Welcome!</h1>
+      <?php if ($header != "") : ?>
+        <p><?php echo $header; ?></p>
+      <?php else: ?>
+        <p>I'd like to add you to my list of valued clients who receive monthly updates on local market conditions and events.</p>
+      <?php endif; ?>
+    </div>  
+    <?php echo $idxUI->clientRequestForm($type = "subscribe", $listingId, $height = 300, $popup = true); ?>
+    <div class="close-button" data-close aria-label="Close modal" type="button">
+      <span aria-hidden="true">&times;</span>
+    </div>
+  </div>
+  <button style="display:none;" id="idxgc-subscribe-button" class="idxgc-button" data-open="idxgcSubscribe">Subscribe</button> 
+  <script>
+    jQuery(document).foundation();
+    
+    if (typeof localStorage.idxgcDateVisited == 'undefined') {
+      // Show popup if first visit
+      localStorage.idxgcDateVisited = new Date();
+      jQuery("#idxgc-subscribe-button").click();
+    }
+    else {
+      // Show popup if has been at least 14 days since last visit
+      var currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() - 14);
+      var lastDateVisited = new Date(localStorage.idxgcDateVisited);
+      if (currentDate > lastDateVisited) {
+        jQuery("#idxgc-subscribe-button").click();
+        localStorage.idxgcDateVisited = new Date(); 
+      }
+    }
+  </script>
+  <?php
+}
+
+function idxgcCaptureListingWatchPopup() {
+  global $idxUI;
+  ?>
+  <div class="reveal tiny" id="idxgcCaptureListingWatch" data-reveal>
+     <?php echo $idxUI->captureListingWatchForm($height = 450, $popup = true); ?>
+     <div class="close-button" data-close aria-label="Close modal" type="button">
+        <span aria-hidden="true">&times;</span>
+     </div>
+  </div>
+  <button style="display:none;" id="idxgc-capture-lw-button" class="idxgc-button" data-open="idxgcCaptureListingWatch">Capture Listing Watch</button> 
+  <script>
+    jQuery(document).foundation();
+    
+    if (localStorage.idxgcMlsSearches >= 3) {
+      jQuery("#idxgc-capture-lw-button").click();
+      localStorage.idxgcMlsSearches = 0;
+    }
+  </script>
+  <?php
+}
+
+function idxgcSearchForm($action = "", $searchFormType = "", $excludeLocations = array()) {
+  global $idxUI;
+  echo $idxUI->searchForm($action, $searchFormType, $excludeLocations);
 }
 
 
-function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPagination = true) {
+function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPagination = true, $showHeader = true, $randomize = false, $limit = 0) {
   global $idxClient, $idxUI;
     
+  if ($randomize == true)
+    shuffle($listings);    
+  
   if (count($listings) == 0 && $totalResultsCount == 0) {
     $errorMessage = "";
     $resultView = "grid";
@@ -276,9 +349,10 @@ function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPa
   }
   
   ?>
-
+  
 <div id="idxgc-search-results" class="grid-g">
   <div class="grid-u-1">
+    <?php if ($showHeader == true) : ?>
     <div id="idxgc-search-results-header" class="grid-g">
       <div class="grid-u-1 grid-u-sm-1-2">
         <div id="idxgc-search-type-toggle">
@@ -299,6 +373,7 @@ function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPa
         <?php endif; ?>
       </div>
     </div>
+    <?php endif; ?>
     
     <?php if ($_REQUEST["result_view"] == "map") : ?>
     <div id="idxgc-map-results">
@@ -318,7 +393,7 @@ function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPa
     </div>
     <?php else: ?>
     <div id="idxgc-list-results">
-      <?php echo $idxUI->searchResults($listings); ?>
+      <?php echo $idxUI->searchResults($listings, $limit); ?>
        
       <?php if ($showPagination == true) : ?>
       <div id="idxgc-pagination-footer"><?php echo $idxUI->searchPagination($resultsPerPage = 12, $totalResultsCount); ?></div>
@@ -326,10 +401,32 @@ function idxgcSearchResults($listings = array(), $totalResultsCount = 0, $showPa
     </div>
     <?php endif; ?>
   </div>
-  
 </div>
+
 <?php
 
+}
+
+function idxgcListingWatchCapture($clientPortalPath = "") {
+  ?>
+  <a id="idxgc-lw-capture-popup" href="#" data-open="idxgc-lw-capture" style="display:none;">Listing Watch Capture</a>
+
+<div class="reveal" id="idxgc-lw-capture" data-reveal>
+  <h2>Get Notified?</h2>
+  <p>Save your search results and receive notifications when new properties match your criteria</p>
+  <a href="<?php echo $clientPortalPath; ?>?listing_watch=1"><button class="idxgc-button">Sign Up</button></a>
+  <div class="close-button" data-close aria-label="Close modal" type="button">
+    <span aria-hidden="true">&times;</span>
+  </div>
+</div>
+
+<script>
+    jQuery(document).foundation();
+    jQuery(document).ready(function($) {
+      $("#idxgc-lw-capture-popup").click();
+    })
+</script>
+<?php
 }
 
 function idxgcContactForm() {
@@ -388,7 +485,7 @@ function idxgcCmsMetaTitle()
     wp_title( '|', true, 'right' );
   
     // Add the blog name.
-    bloginfo( 'name' );
+    //bloginfo( 'name' );
   
     // Add the blog description for the home/front page.
     $siteDescription = get_bloginfo( 'description', 'display' );
@@ -437,6 +534,8 @@ function idxgcCommunity( $atts ) {
   
   $view = $pull_atts["view"];
   
+  $setting = $pull_atts["setting"];
+  
   foreach($list_areas as $list_area) {
     array_push($list_areas_trimmed, trim($list_area));
   }
@@ -450,8 +549,12 @@ function idxgcCommunity( $atts ) {
   if ($view != "")
     $args["view"] = $view;
   
+  if ($setting != "")
+    $args["setting"] = $setting;
+  
   $results = $idxClient->getCommunityListings($args);
-  echo idxgcSearchResults($results->listings, $totalResultsCount = $results->count);
+
+  echo idxgcSearchResults();
   
   $output_string = ob_get_contents();
   ob_end_clean();
